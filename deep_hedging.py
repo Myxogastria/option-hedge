@@ -18,9 +18,10 @@ p = 0.6
 r = 0.01
 K = 100
 
+# W_0, Vs_0を入力なしの変数にしたいが，
+# そうする方法がよくわからないので
+# 常に同じ値を入力するS_0を入力としている．
 S_0 = Input(shape=(1, ), name='S_0') # price of assets
-# W_0 = Dense(1, kernel_initializer=keras.initializers.Constant(value=0.054), use_bias=False, name='W_0')(S_0) # valuation of portfolio
-# Vs_0 = Dense(1, kernel_initializer=keras.initializers.Constant(value=0.614), use_bias=False, name='Vs_0')(S_0) # portfolio of stock by value
 W_0 = Dense(1, use_bias=False, name='W_0')(S_0) # valuation of portfolio
 Vs_0 = Dense(1, use_bias=False, name='Vs_0')(S_0) # portfolio of stock by value
 Vr_0 = Subtract(name='Vr_0')([W_0, Vs_0]) # portfolio of risk-free asset by value
@@ -31,9 +32,6 @@ Ws_1 = Multiply(name='Ws_1')([Rs_1, Vs_0]) # valuation of stock after 1 term
 Wr_1 = (1+r)*Vr_0 # valuation of risk-free asset after 1 term
 W_1 = Add(name='W_1')([Ws_1, Wr_1])
 Vs_1 = Dense(1, use_bias=True, name='Vs_1')(W_1)
-# Vs_1 = Dense(1, kernel_initializer=keras.initializers.Constant(value=9), 
-#     bias_initializer=keras.initializers.Constant(value=11), 
-#     use_bias=True, name='Vs_1')(W_1)
 Vr_1 = Subtract(name='Vr_1')([W_1, Vs_1])
 
 S_2 = Input(shape=(1, ), name='S_2')
