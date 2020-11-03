@@ -6,6 +6,7 @@ from tensorflow.keras.utils import plot_model
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pickle
 import shutil
 
 plt.close('all')
@@ -13,8 +14,11 @@ plt.close('all')
 n_terms = 30
 n_weight = 10
 
+# epochs:3000, loss:0.6, price:2.3
+epochs = 3000
+
 S_init = 100
-K = 100
+strike = 100
 
 u = 0.1
 d = -0.05
@@ -31,7 +35,7 @@ def binom_iter(input_size):
             for i in range(n_terms):
                 input_list.append((1+d+(u-d)*np.random.randint(2, size=(input_size, )))*input_list[-1])
 
-            target_payoff = np.maximum(input_list[-1]-K, 0).reshape((input_size, 1))
+            target_payoff = np.maximum(input_list[-1]-strike, 0).reshape((input_size, 1))
             yield input_list, target_payoff
     return 1, input_generator()
 
@@ -52,7 +56,7 @@ class GeometricBrownianMotion:
         def input_generator():
             while True:
                 input_np = np.stack([self.get_path(time, spot) for i in range(input_size)]).T
-                target_payoff = np.maximum(input_np[-1]-K, 0).reshape((input_size, 1))
+                target_payoff = np.maximum(input_np[-1]-strike, 0).reshape((input_size, 1))
                 yield [input_np[i] for i in range(input_np.shape[0])], target_payoff
         return 1, input_generator()
 
@@ -104,32 +108,35 @@ model.compile(optimizer=optimizer, loss='mean_absolute_error')
 
 model_option_price = Model(inputs=S_list, outputs=W_list[0])
 
-plot_model(model, show_shapes=True, to_file='model.png')
-model.summary()
+# plot_model(model, show_shapes=True, to_file='model.png')
 
-
-log_dir = '/tmp/log'
-shutil.rmtree(log_dir, ignore_errors=True)
-tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-
-# history = model.fit(input_list, target_payoff, batch_size=N, epochs=20000, callbacks=[tensorboard_callback])
-history = model.fit(train_batches, steps_per_epoch=train_steps, epochs=3000, callbacks=[tensorboard_callback])
-
-pd.DataFrame({'loss': history.history['loss']}).plot()
-plt.yscale('log')
-plt.grid()
-
-input_list, _ = next(train_batches)
-
-hedged_payoff = model.predict(input_list)
-plt.figure()
-plt.scatter(input_list[-1], hedged_payoff)
-plt.grid()
-
-option_price = model_option_price.predict(input_list)
-print(option_price[0][0])
-
-plt.show(block=False)
-
+if __name__ == '__main__':
+    model.summary()
+    
+    
+    log_dir = '/tmp/log'
+    shutil.rmtree(log_dir, ignore_errors=True)
+    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    
+    # history = model.fit(input_list, target_payoff, batch_size=N, epochs=20000, callbacks=[tensorboard_callback])
+    history = model.fit(train_batches, steps_per_epoch=train_steps, epochs=epochs, callbacks=[tensorboard_callback])
+    model.save('dh_model.h5')
+    
+    pd.DataFrame({'loss': history.history['loss']}).plot()
+    plt.yscale('log')
+    plt.grid()
+    
+    input_list, _ = next(train_batches)
+    
+    hedged_payoff = model.predict(input_list)
+    plt.figure()
+    plt.scatter(input_list[-1], hedged_payoff)
+    plt.grid()
+    
+    option_price = model_option_price.predict(input_list)
+    print(option_price[0][0])
+    
+    plt.show(block=False)
+    
 
 
